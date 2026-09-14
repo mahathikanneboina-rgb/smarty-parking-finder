@@ -40,7 +40,7 @@ var import_bcryptjs = __toESM(require("bcryptjs"), 1);
 const import_meta = {};
 const app = (0, import_express.default)();
 const PORT = process.env.PORT || 3e3;
-const __dirname = import_node_path.default.dirname((0, import_node_url.fileURLToPath)(import_meta.url));
+const __dirname = process.env.VERCEL ? "/tmp" : import_node_path.default.dirname((0, import_node_url.fileURLToPath)(import_meta.url));
 const DB_FILE = process.env.VERCEL ? import_node_path.default.join("/tmp", "smarty-parking-db.json") : import_node_path.default.join(__dirname, "db.json");
 const VALID_STATUSES = /* @__PURE__ */ new Set(["available", "reserved", "occupied"]);
 app.use((0, import_cors.default)());

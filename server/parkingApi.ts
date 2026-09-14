@@ -8,7 +8,9 @@ import bcrypt from 'bcryptjs';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __dirname = process.env.VERCEL
+    ? '/tmp'
+    : path.dirname(fileURLToPath(import.meta.url));
 const DB_FILE = process.env.VERCEL
     ? path.join('/tmp', 'smarty-parking-db.json')
     : path.join(__dirname, 'db.json');
