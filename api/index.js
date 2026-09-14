@@ -1,3 +1,6 @@
-const parkingApiModule = require('./parkingApi.cjs');
+import { createRequire } from "node:module";
 
-module.exports = parkingApiModule.default || parkingApiModule;
+const require = createRequire(import.meta.url);
+const parkingApiModule = require("./parkingApi.cjs");
+
+export default parkingApiModule.default || parkingApiModule;
