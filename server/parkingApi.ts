@@ -1,11 +1,14 @@
-const express = require('express');
-const cors = require('cors');
-const fs = require('fs');
-const path = require('path');
-const bcrypt = require('bcryptjs');
+// @ts-nocheck
+import express from 'express';
+import cors from 'cors';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import bcrypt from 'bcryptjs';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DB_FILE = path.join(__dirname, 'db.json');
 const VALID_STATUSES = new Set(['available', 'reserved', 'occupied']);
 
@@ -13,7 +16,7 @@ app.use(cors());
 app.use(express.json());
 
 // SSE Client list
-let sseClients = [];
+let sseClients: Array<{ id: number; res: express.Response }> = [];
 
 // Helper functions for DB access
 function readDB() {
@@ -456,4 +459,4 @@ app.get('/api/parking/analytics', (req, res) => {
     });
 });
 
-module.exports = app;
+export default app;

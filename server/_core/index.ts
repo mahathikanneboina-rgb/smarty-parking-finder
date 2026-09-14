@@ -9,7 +9,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 // @ts-ignore - the migrated CommonJS API is intentionally mounted as an Express sub-application.
-import parkingApi from "../parkingApi.cjs";
+import parkingApi from "../parkingApi";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {

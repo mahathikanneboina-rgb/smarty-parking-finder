@@ -1,7 +1,7 @@
 import { createServer, type Server } from "node:http";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 // @ts-expect-error The migrated CommonJS Express app has no separate type declaration.
-import parkingApi from "./parkingApi.cjs";
+import parkingApi from "./parkingApi";
 
 type ResponseData = {
   status: number;
