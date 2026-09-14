@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Parking Finder with AI</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="dark-theme">
+
+    <!-- Header Navbar -->
+    <header class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <i class="fa-solid fa-square-p logo-icon"></i>
+                <span>SmartPark<span class="logo-accent">AI</span></span>
+            </div>
+            
+            <nav class="nav-links">
+                <button class="nav-link active" data-tab="map-tab"><i class="fa-solid fa-map-location-dot"></i> Parking Map</button>
+                <button class="nav-link" data-tab="analytics-tab"><i class="fa-solid fa-chart-line"></i> Analytics</button>
+                <button class="nav-link" data-tab="ticket-tab"><i class="fa-solid fa-ticket"></i> Ticket Center</button>
+                <button class="nav-link" data-tab="ai-tab"><i class="fa-solid fa-microchip"></i> AI Camera Sim</button>
+            </nav>
+
+            <div class="auth-section">
+                <span id="user-display"><i class="fa-solid fa-circle-user"></i> Guest</span>
+                <button id="auth-action-btn" class="btn btn-secondary btn-sm">Login</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="main-content">
+
+        <!-- Notification Banner -->
+        <div id="toast-notification" class="toast hidden">
+            <i class="fa-solid fa-bell toast-icon"></i>
+            <span id="toast-message">Message text goes here</span>
+        </div>
+
+        <!-- AUTH MODAL -->
+        <div id="auth-modal" class="modal hidden">
+            <div class="modal-content glass">
+                <span class="close-btn" id="close-auth-modal">&times;</span>
+                <div class="auth-box">
+                    <h2 id="auth-title">Log In to SmartPark</h2>
+                    <p class="auth-subtitle">Manage your reservations and tickets instantly</p>
+                    
+                    <form id="auth-form">
+                        <div class="form-group">
+                            <label for="username"><i class="fa-solid fa-user"></i> Username</label>
+                            <input type="text" id="username" placeholder="Enter username" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="password"><i class="fa-solid fa-lock"></i> Password</label>
+                            <input type="password" id="password" placeholder="Enter password" required>
+                        </div>
+                        <button type="submit" id="auth-submit-btn" class="btn btn-primary btn-block">Log In</button>
+                    </form>
+                    
+                    <div class="auth-toggle">
+                        <span id="auth-toggle-text">Don't have an account?</span>
+                        <a href="#" id="auth-toggle-link">Register Now</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 1: PARKING MAP & REALTIME SLOTS -->
+        <section id="map-tab" class="tab-pane active">
+            <!-- Hero Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card glass">
+                    <div class="stat-icon car-icon-bg"><i class="fa-solid fa-parking"></i></div>
+                    <div class="stat-info">
+                        <h3>Total Slots</h3>
+                        <p class="stat-number" id="totalSlots">60</p>
+                        <span class="stat-sub">Across 3 Floors</span>
+                    </div>
+                </div>
+                <div class="stat-card glass">
+                    <div class="stat-icon check-icon-bg"><i class="fa-solid fa-circle-check"></i></div>
+                    <div class="stat-info">
+                        <h3>Available</h3>
+                        <p class="stat-number text-success" id="availableSlots">--</p>
+                        <span class="stat-sub" id="availableSub">Ready to book</span>
+                    </div>
+                </div>
+                <div class="stat-card glass">
+                    <div class="stat-icon reserved-icon-bg"><i class="fa-solid fa-bookmark"></i></div>
+                    <div class="stat-info">
+                        <h3>Reserved</h3>
+                        <p class="stat-number text-warning" id="reservedSlots">--</p>
+                        <span class="stat-sub">Pre-booked online</span>
+                    </div>
+                </div>
+                <div class="stat-card glass">
+                    <div class="stat-icon occupied-icon-bg"><i class="fa-solid fa-car"></i></div>
+                    <div class="stat-info">
+                        <h3>Occupied</h3>
+                        <p class="stat-number text-danger" id="occupiedSlots">--</p>
+                        <span class="stat-sub">Vehicles parked</span>
+                    </div>
+                </div>
+                <div class="stat-card glass progress-stat">
+                    <div class="progress-ring-container">
+                        <svg class="progress-ring" width="80" height="80">
+                            <circle class="progress-ring__background" stroke="#334155" stroke-width="6" fill="transparent" r="32" cx="40" cy="40"/>
+                            <circle class="progress-ring__circle" id="occupancyCircle" stroke="var(--primary-glow)" stroke-width="6" fill="transparent" r="32" cx="40" cy="40" stroke-dasharray="201.06" stroke-dashoffset="201.06"/>
+                        </svg>
+                        <span class="progress-text" id="occupancyPercent">0%</span>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Occupancy</h3>
+                        <p class="stat-desc">Facility utilization</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interactive Map controls -->
+            <div class="controls-panel glass">
+                <div class="floor-selector">
+                    <button class="floor-btn active" data-floor="ground"><i class="fa-solid fa-car-side"></i> Ground Floor (Cars)</button>
+                    <button class="floor-btn" data-floor="first"><i class="fa-solid fa-motorcycle"></i> First Floor (Bikes)</button>
+                    <button class="floor-btn" data-floor="second"><i class="fa-solid fa-charging-station"></i> Second Floor (EVs)</button>
+                </div>
+                <div class="search-and-utility">
+                    <div class="search-box">
+                        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                        <input type="text" id="searchInput" placeholder="Search Slot (e.g., 5)...">
+                        <button id="searchBtn" class="btn btn-primary btn-sm">Search</button>
+                    </div>
+                    <button id="resetBtn" class="btn btn-danger-outline btn-sm"><i class="fa-solid fa-rotate-left"></i> Reset Floor</button>
+                </div>
+            </div>
+
+            <!-- Legend and Grid Container -->
+            <div class="map-layout glass">
+                <div class="map-header">
+                    <h2 id="current-floor-title">Ground Floor Layout</h2>
+                    <div class="map-legend">
+                        <span class="legend-item"><span class="legend-box available"></span> Available</span>
+                        <span class="legend-item"><span class="legend-box reserved"></span> Reserved</span>
+                        <span class="legend-item"><span class="legend-box occupied"></span> Occupied</span>
+                    </div>
+                </div>
+                
+                <div id="parkingGrid" class="parking-grid">
+                    <!-- Dynamic slots injected here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: PARKING ANALYTICS -->
+        <section id="analytics-tab" class="tab-pane">
+            <div class="analytics-header">
+                <h2><i class="fa-solid fa-chart-pie"></i> Real-Time Parking Analytics</h2>
+                <p>Advanced metrics and utilization reports for building management.</p>
+            </div>
+
+            <div class="analytics-row">
+                <!-- Summary Metrics -->
+                <div class="analytics-summary glass">
+                    <h3>Performance Overview</h3>
+                    <div class="metric-list">
+                        <div class="metric-row">
+                            <span class="metric-label">Peak Occupancy Today</span>
+                            <span class="metric-value">95%</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Average Parking Duration</span>
+                            <span class="metric-value">2.4 hrs</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Daily Revenue Generated</span>
+                            <span class="metric-value">$420.00</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">EV Charger Availability</span>
+                            <span class="metric-value text-success" id="ev-charger-stat">-- Available</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chart 1: Vehicle Distribution -->
+                <div class="chart-container glass">
+                    <h3>Vehicle Category Distribution</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="vehicleDistributionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analytics-row">
+                <!-- Chart 2: Floor Occupancy Comparison -->
+                <div class="chart-container glass">
+                    <h3>Occupancy Rates by Floor</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="floorOccupancyChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Chart 3: Peak Booking Hours -->
+                <div class="chart-container glass">
+                    <h3>Peak Booking Hours (Hourly Occupancy %)</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="peakHoursChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: TICKET CENTER & RESERVATION -->
+        <section id="ticket-tab" class="tab-pane">
+            <div class="ticket-split-layout">
+                <!-- Booking Form Column -->
+                <div class="booking-section glass">
+                    <h2><i class="fa-solid fa-square-plus text-primary"></i> Reserve a Parking Slot</h2>
+                    <p class="subtitle">Secure your parking space before arrival. Rates starting from $2.00/hr.</p>
+                    
+                    <form id="ticket-booking-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="booking-floor">Select Floor</label>
+                                <select id="booking-floor" required>
+                                    <option value="ground">Ground Floor (Cars - $3.00/hr)</option>
+                                    <option value="first">First Floor (Bikes - $1.50/hr)</option>
+                                    <option value="second">Second Floor (EVs - $4.00/hr)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="booking-slot">Select Slot ID</label>
+                                <select id="booking-slot" required>
+                                    <!-- Dynamic options inserted based on floor selection -->
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="vehicle-number">License Plate / Vehicle Number</label>
+                                <input type="text" id="vehicle-number" placeholder="e.g. KA-03-HA-1234" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="vehicle-category">Vehicle Category</label>
+                                <select id="vehicle-category" disabled>
+                                    <option value="Car">Car</option>
+                                    <option value="Bike">Bike</option>
+                                    <option value="EV">EV Vehicle</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="pricing-calculator">
+                            <span class="calc-label">Est. Charge:</span>
+                            <span class="calc-price" id="calc-price-display">$3.00 / hour</span>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-block"><i class="fa-solid fa-receipt"></i> Generate Digital Ticket</button>
+                    </form>
+                </div>
+
+                <!-- Digital Ticket View Column -->
+                <div class="ticket-display-section glass">
+                    <h2><i class="fa-solid fa-id-card text-success"></i> Your Digital Boarding Ticket</h2>
+                    <p class="subtitle">Print this ticket or scan the QR code at the parking gate.</p>
+
+                    <div id="no-ticket-state" class="no-ticket-card">
+                        <i class="fa-solid fa-ticket-simple inactive-ticket-icon"></i>
+                        <p>No active reservations found.</p>
+                        <p class="subtext">Please fill out the reservation form on the left or select an available slot on the map to reserve space.</p>
+                    </div>
+
+                    <!-- Digital Ticket Pass -->
+                    <div id="active-ticket-card" class="ticket-pass hidden">
+                        <div class="ticket-pass-header">
+                            <div class="ticket-brand">
+                                <i class="fa-solid fa-square-p"></i>
+                                <span>SmartPark Pass</span>
+                            </div>
+                            <div class="ticket-id" id="tkt-id-val">TKT-XXXXXX</div>
+                        </div>
+                        
+                        <div class="ticket-pass-body">
+                            <div class="ticket-row">
+                                <div class="ticket-col">
+                                    <span class="lbl">Floor</span>
+                                    <span class="val" id="tkt-floor-val">Ground</span>
+                                </div>
+                                <div class="ticket-col">
+                                    <span class="lbl">Slot Assigned</span>
+                                    <span class="val accent-val" id="tkt-slot-val">Slot 05</span>
+                                </div>
+                            </div>
+                            
+                            <div class="ticket-row">
+                                <div class="ticket-col">
+                                    <span class="lbl">Vehicle Type</span>
+                                    <span class="val" id="tkt-type-val">Car</span>
+                                </div>
+                                <div class="ticket-col">
+                                    <span class="lbl">License Plate</span>
+                                    <span class="val" id="tkt-plate-val">N/A</span>
+                                </div>
+                            </div>
+
+                            <div class="ticket-row">
+                                <div class="ticket-col">
+                                    <span class="lbl">Booked At</span>
+                                    <span class="val" id="tkt-time-val">2026-06-25 15:30</span>
+                                </div>
+                                <div class="ticket-col">
+                                    <span class="lbl">Status</span>
+                                    <span class="val badge badge-warning"><i class="fa-solid fa-clock-rotate-left"></i> Reserved</span>
+                                </div>
+                            </div>
+
+                            <!-- Interactive Navigation Help -->
+                            <div class="ticket-navigation">
+                                <span class="lbl"><i class="fa-solid fa-compass"></i> Wayfinding Directions</span>
+                                <p class="val" id="tkt-nav-directions">Loading directions...</p>
+                            </div>
+                        </div>
+
+                        <!-- Ticket QR & Action Footer -->
+                        <div class="ticket-pass-footer">
+                            <div class="qr-container">
+                                <!-- Simulated QR Code generated by CSS/HTML blocks -->
+                                <div class="mock-qr">
+                                    <div class="qr-dot qr-corner-1"></div>
+                                    <div class="qr-dot qr-corner-2"></div>
+                                    <div class="qr-dot qr-corner-3"></div>
+                                    <div class="qr-center-pattern"></div>
+                                </div>
+                                <span class="qr-label">Scan at Entry Gate</span>
+                            </div>
+                            <div class="ticket-actions">
+                                <button class="btn btn-secondary btn-sm btn-block" id="print-tkt-btn"><i class="fa-solid fa-print"></i> Print Pass</button>
+                                <button class="btn btn-danger btn-sm btn-block" id="checkout-tkt-btn"><i class="fa-solid fa-circle-xmark"></i> Check Out (Release)</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 4: AI CAMERA SIMULATOR -->
+        <section id="ai-tab" class="tab-pane">
+            <div class="ai-split-layout">
+                <!-- Live CCTV Console -->
+                <div class="cctv-console glass">
+                    <div class="cctv-header">
+                        <div class="cctv-status">
+                            <span class="pulse-red"></span>
+                            <span>CCTV CAM-01 (LIVE MONITOR)</span>
+                        </div>
+                        <div class="cctv-controls">
+                            <button id="camera-toggle-btn" class="btn btn-secondary btn-sm"><i class="fa-solid fa-video-slash"></i> Toggle Camera Source</button>
+                            <button id="ai-simulate-btn" class="btn btn-primary btn-sm"><i class="fa-solid fa-wand-magic-sparkles"></i> Scan with YOLOv8</button>
+                        </div>
+                    </div>
+
+                    <!-- Canvas Screen for Bounding Boxes -->
+                    <div class="cctv-screen-wrapper">
+                        <canvas id="cctvCanvas" width="640" height="360"></canvas>
+                        
+                        <div id="cctv-overlay-text" class="cctv-overlay-text hidden">
+                            <div class="scanner-line"></div>
+                            <div class="scanner-text"><i class="fa-solid fa-brain"></i> Running AI Frame Inference...</div>
+                        </div>
+
+                        <div id="camera-off-state" class="camera-off-state">
+                            <i class="fa-solid fa-video-slash camera-off-icon"></i>
+                            <p>Camera feed is offline.</p>
+                            <button id="start-cctv-btn" class="btn btn-primary">Start Live Feed</button>
+                        </div>
+                    </div>
+
+                    <div class="cctv-footer">
+                        <div class="cctv-metric">
+                            <span class="label">YOLO FPS:</span>
+                            <span class="value" id="yolo-fps">30.2</span>
+                        </div>
+                        <div class="cctv-metric">
+                            <span class="label">Detections:</span>
+                            <span class="value" id="yolo-detections">0 Vehicles</span>
+                        </div>
+                        <div class="cctv-metric">
+                            <span class="label">Inference Time:</span>
+                            <span class="value" id="yolo-latency">12ms</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Python AI Integration Info -->
+                <div class="ai-info-section glass">
+                    <h2><i class="fa-brands fa-python text-primary"></i> YOLOv8 / OpenCV Physical Integration</h2>
+                    <p>Integrate a real webcam or security camera feed using Python. The AI script detects empty and occupied parking slots and synchronizes with this web dashboard in real time.</p>
+                    
+                    <div class="code-box-header">
+                        <span>ai_detector.py (Local Script Setup)</span>
+                        <button class="btn btn-secondary btn-xs" id="copy-py-btn"><i class="fa-solid fa-copy"></i> Copy Code</button>
+                    </div>
+                    <pre class="code-box"><code># Install dependencies:
+# pip install opencv-python ultralytics requests
+
+import cv2
+import requests
+from ultralytics import YOLO
+
+# Connect to Express Backend
+API_URL = "http://localhost:3000/api/parking/ai-update"
+# Load YOLO model
+model = YOLO('yolov8n.pt')
+
+# ... (Open script file to view complete implementation code)</code></pre>
+
+                    <div class="integration-steps">
+                        <h3>How to Run:</h3>
+                        <ol>
+                            <li>Make sure Node.js server is running (`npm start`).</li>
+                            <li>Install python requirements: `pip install opencv-python ultralytics requests`.</li>
+                            <li>Run the Python script: `python ai_detector.py`.</li>
+                            <li>Watch the camera feed detect cars and instantly update the Web Parking Map!</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <p>&copy; 2026 SmartPark AI Systems. Created for College Demonstration & Showcase.</p>
+            <div class="footer-tags">
+                <span class="badge badge-primary">Node.js API</span>
+                <span class="badge badge-success">YOLOv8 AI</span>
+                <span class="badge badge-info">SSE Live Sync</span>
+                <span class="badge badge-warning">Express.js</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Core App Logic -->
+    <script src="script.js"></script>
+
+</body>
+</html>
