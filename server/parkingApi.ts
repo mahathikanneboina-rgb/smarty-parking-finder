@@ -9,7 +9,9 @@ import bcrypt from 'bcryptjs';
 const app = express();
 const PORT = process.env.PORT || 3000;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_FILE = path.join(__dirname, 'db.json');
+const DB_FILE = process.env.VERCEL
+    ? path.join('/tmp', 'smarty-parking-db.json')
+    : path.join(__dirname, 'db.json');
 const VALID_STATUSES = new Set(['available', 'reserved', 'occupied']);
 
 app.use(cors());
