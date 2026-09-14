@@ -7,6 +7,7 @@ const bcrypt = require('bcryptjs');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const DB_FILE = path.join(__dirname, 'db.json');
+const VALID_STATUSES = new Set(['available', 'reserved', 'occupied']);
 
 app.use(cors());
 app.use(express.json());
@@ -153,6 +154,9 @@ app.post('/api/parking/slots/update', (req, res) => {
     if (!floor || !slotId || !status) {
         return res.status(400).json({ error: "Missing required fields: floor, slotId, status" });
     }
+    if (!VALID_STATUSES.has(status)) {
+        return res.status(400).json({ error: "Invalid status. Use available, reserved, or occupied" });
+    }
 
     const db = readDB();
     if (!db.slots[floor]) {
@@ -264,7 +268,7 @@ app.post('/api/parking/ticket', (req, res) => {
     db.tickets = db.tickets.map(t => {
         if (t.username.toLowerCase() === username.toLowerCase() && t.active) {
             // Also free their previous slot if they had one active
-            const prevSlot = db.slots[t.floor].find(s => s.id === t.slotId);
+            const prevSlot = db.slots[t.floor]?.find(s => s.id === t.slotId);
             if (prevSlot && prevSlot.status === 'reserved') {
                 prevSlot.status = 'available';
                 prevSlot.vehicleNumber = null;
@@ -352,6 +356,7 @@ app.post('/api/parking/ai-update', (req, res) => {
     const updatedSlots = [];
 
     detections.forEach(det => {
+        if (!det || !VALID_STATUSES.has(det.status)) return;
         const slot = db.slots[floor].find(s => s.id === parseInt(det.slotId));
         if (slot) {
             // Only update if status is actually changing
@@ -394,6 +399,8 @@ app.post('/api/parking/ai-update', (req, res) => {
 
 app.get('/api/parking/analytics', (req, res) => {
     const db = readDB();
+    const floors = Object.values(db.slots);
+    const totalSlots = floors.reduce((total, slots) => total + slots.length, 0);
     
     // 1. Calculate occupancy rate per floor
     const occupancy = {};
@@ -406,7 +413,7 @@ app.get('/api/parking/analytics', (req, res) => {
             occupied,
             reserved,
             available: total - occupied - reserved,
-            percent: Math.round(((occupied + reserved) / total) * 100)
+            percent: total ? Math.round(((occupied + reserved) / total) * 100) : 0
         };
     });
 
@@ -442,10 +449,10 @@ app.get('/api/parking/analytics', (req, res) => {
         peakHours,
         distribution,
         summary: {
-            totalSlots: 60,
+            totalSlots,
             activeOccupied: totalOccupiedCount,
             activeReserved: totalReservedCount,
-            totalAvailable: 60 - totalOccupiedCount - totalReservedCount
+            totalAvailable: totalSlots - totalOccupiedCount - totalReservedCount
         }
     });
 });
